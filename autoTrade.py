@@ -6,8 +6,8 @@ import numpy as np
 import time
 from fbprophet import Prophet
 
-access = "assess_key"
-secret = "secret_key"
+access = "your-access"
+secret = "your-secret"
 ticker = "KRW-BTC" # 거래 coin
 buy_cur = "KRW" # 매수 화폐
 sel_cur = "BTC" # 매도 화폐

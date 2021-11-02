@@ -3,8 +3,8 @@ import pyupbit
 import datetime
 import schedule
 import numpy as np
-import time
 from fbprophet import Prophet
+import logging
 
 access = "your-access"
 secret = "your-secret"
@@ -14,6 +14,24 @@ sel_cur = "BTC" # 매도 화폐
 count_val = 7 #7일간 최적 k value 추출
 predicted_close_price = 0
 opt_k_val = 0
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+#logger.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter(u'%(asctime)s [%(levelname)8s] %(message)s')
+
+"""
+
+ asctime : 날짜 시간 ex)2021.04.10 11:21:55,155
+ levelname : 로그 레벨(DEBUS, INFO, WARNING, ERROR, CRITICAL)
+ message : 로그 메시지
+ 
+"""
+
+#FileHandler
+file_handler = logging.FileHandler('D:/STUDY/pyTradeAuto/logs/output.log')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 def get_target_price(ticker, k):
     """변동성 돌파 전략으로 매수 목표가 조회"""
@@ -92,15 +110,12 @@ predict_price(ticker)
 schedule.every().hour.do(lambda: predict_price(ticker))
 schedule.every().hour.do(lambda: get_opt_k(1))
 
-def now_time():
-    now = time.localtime()    
-    print("TIME =======> %04d/%02d/%02d %02d:%02d:%02d" % (now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec))
-    
+   
 # 로그인
 upbit = pyupbit.Upbit(access, secret)
 
-now_time()
 print(">> autotrade start !!")
+logger.info(">> autotrade start !!")
 
 # 자동매매 시작
 while True:
@@ -108,33 +123,31 @@ while True:
         now = datetime.datetime.now()
         start_time = get_start_time(ticker)
         end_time = start_time + datetime.timedelta(days=1) #09:00 + 1일
-        
-        #print("opt_k_val => " + str(opt_k_val))
         schedule.run_pending()
 
         # 09:00 < 현재 < #08:59:50
         if start_time < now < end_time - datetime.timedelta(seconds=10):  # 10초 전
             target_price = get_target_price(ticker, opt_k_val)
-            #print(target_price)
             ma15 = get_ma15(ticker)
             current_price = get_current_price(ticker)
             #if target_price < current_price and ma15 < current_price:
             #if target_price < current_price:
             if target_price < current_price and current_price < predicted_close_price:   
-                print(">> buy_market_order << ")
-                now_time()
+                logger.info(">> buy_market_order << ")
                 krw = get_balance(buy_cur)
-                print("target_price :" + str(target_price) + "/ current_price :" + str(current_price) +"/ predicted_close_price :" + str(predicted_close_price)+"/ krw :" + str(krw))                 
+                logger.info("target_price :" + str(target_price) + "/ current_price :" + str(current_price) +"/ predicted_close_price :" + str(predicted_close_price)+"/ krw :" + str(krw))
                 if krw >= 10000 and krw <= 300000:
                     upbit.buy_market_order(ticker, krw*0.9995)
-        else:
-            print(">> sell_market_order << ")
-            now_time()                        
+        else:                   
+            logger.info(">> sell_market_order << ")
             btc = get_balance(sel_cur)
-            print("target_price :" + str(target_price) + "/ current_price :" + str(current_price) +"/ predicted_close_price :" + str(predicted_close_price)+"/ btc :" + str(btc))                             
+            logger.info("target_price :" + str(target_price) + "/ current_price :" + str(current_price) +"/ predicted_close_price :" + str(predicted_close_price)+"/ btc :" + str(btc))
             if btc > 0.00008:
                 upbit.sell_market_order(ticker, btc*0.9995)
         time.sleep(1)
     except Exception as e:
-        print(e)
+        logger.error(e)
+        time.sleep(1)
+    finally:
+        logger.error(">> autotrade interrupt occur!!")
         time.sleep(1)

@@ -29,7 +29,7 @@ formatter = logging.Formatter(u'%(asctime)s [%(levelname)8s] %(message)s')
 """
 
 #FileHandler
-file_handler = logging.FileHandler('D:/STUDY/pyTradeAuto/logs/output.log')
+file_handler = logging.FileHandler('./logs/output.log')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
@@ -107,6 +107,7 @@ def predict_price(ticker):
     closeValue = closeDf['yhat'].values[0]
     predicted_close_price = closeValue
 predict_price(ticker)
+#print("----------",predicted_close_price)
 schedule.every().hour.do(lambda: predict_price(ticker))
 schedule.every().hour.do(lambda: get_opt_k(1))
 
@@ -148,6 +149,6 @@ while True:
     except Exception as e:
         logger.error(e)
         time.sleep(1)
-    finally:
-        logger.error(">> autotrade interrupt occur!!")
-        time.sleep(1)
+#    finally:
+#        logger.error(">> autotrade interrupt occur!!")
+#        time.sleep(1)

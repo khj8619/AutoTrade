@@ -3,7 +3,52 @@ import time
 import datetime
 import numpy as np
 import logging
+import schedule
 
+# 로그인
+access = "your-access"
+secret = "your_secret"
+upbit = pyupbit.Upbit(access, secret)
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+#logger.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter(u'%(asctime)s [%(levelname)8s] %(message)s')
+
+"""
+ asctime : 날짜 시간 ex)2021.04.10 11:21:55,155
+ levelname : 로그 레벨(DEBUS, INFO, WARNING, ERROR, CRITICAL)
+ message : 로그 메시지
+"""
+
+#FileHandler
+file_handler = logging.FileHandler('./logs/output.log')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+logger.info("Login OK~")
+print("Login OK~")
+
+# 총 매수 할 원화, 분할 매수 비율
+totalOrderAmt = 1000000
+rate30 = 0.3
+rate40 = 0.4
+rate_minus = 0.95
+sel_rate = 0.95
+
+# 시간 간격
+interval = "day"
+# interval = "minute240"
+
+# ticker, k, currency
+ticker = "KRW-BTC" # 거래 coin
+buy_cur = "KRW" # 매수 화폐
+sel_cur = "BTC" # 매도 화폐
+opt_k_val = 0
+count_val = 7 #7일간 최적 k value 추출
+buy_seq = "0"
+##########################################################################################################
 def get_target_price(ticker, interval, k):
     """ 변동성 돌파 전략으로 매수 목표가 조회 """
     df = pyupbit.get_ohlcv(ticker, interval=interval, count=2)
@@ -69,50 +114,24 @@ def get_opt_k(k):
         list_k[j] = get_ror(k)
         j = j+1
     k_max = max(list_k)
-    opt_k_val = (list_k.index(k_max) + 1)/10     
+    opt_k_val = (list_k.index(k_max) + 1)/10  
+    
+def price_log():
+    l_target_price = get_target_price(ticker, interval, opt_k_val)
+    l_current_price = get_current_price(ticker)
+    l_ma15 = get_ma15(ticker)
+    
+    logger_p = logging.getLogger()
+    logger_p.setLevel(logging.INFO)
+    #logger_p.setLevel(logging.DEBUG)
+    logger_p.addHandler(file_handler)
+    logger_p.info("target_price:[" + str(l_target_price) + "] /current_price:[" + str(l_current_price) + "] / ma15:[" + str(l_ma15) +"]")
+    #print("target_price:[" + str(l_target_price) + "] /current_price:[" + str(l_current_price) + "] / ma15:[" + str(l_ma15) +"]")
+       
 ##########################################################################################################
+schedule.every(5).minutes.do(lambda: price_log())
+#chedule.every(5).seconds.do(lambda: price_log())
 
-# 로그인
-access = "your-access"
-secret = "your-secret"
-upbit = pyupbit.Upbit(access, secret)
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-#logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter(u'%(asctime)s [%(levelname)8s] %(message)s')
-
-"""
- asctime : 날짜 시간 ex)2021.04.10 11:21:55,155
- levelname : 로그 레벨(DEBUS, INFO, WARNING, ERROR, CRITICAL)
- message : 로그 메시지
-"""
-
-#FileHandler
-file_handler = logging.FileHandler('./logs/output.log')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-logger.info("Login OK~")
-
-# 총 매수 할 원화, 분할 매수 비율
-totalOrderAmt = 1000000
-rate30 = 0.3
-rate40 = 0.4
-rate_minus = 0.95
-sel_rate = 0.95
-
-# 시간 간격
-interval = "day"
-# interval = "minute240"
-
-# ticker, k, currency
-ticker = "KRW-BTC" # 거래 coin
-buy_cur = "KRW" # 매수 화폐
-sel_cur = "BTC" # 매도 화폐
-opt_k_val = 0
-count_val = 7 #7일간 최적 k value 추출
 
 # 자동 매매 무한반복
 while True:
@@ -121,18 +140,20 @@ while True:
         start_time = get_start_time(ticker, interval)
         now = datetime.datetime.now()
         end_time = start_time + datetime.timedelta(days=1) - datetime.timedelta(seconds=10)  #09:00 + 1일 10초 전 
-        
+
         # 매매 시작
         if start_time < now < end_time:
             target_price = get_target_price(ticker, interval, opt_k_val)
             ma15 = get_ma15(ticker)
             i = 0
             while i < 3:
+                schedule.run_pending()
                 current_price = get_current_price(ticker)
-                time.sleep(0.5)
+                time.sleep(1)
                 logger.debug("target_price :" + str(target_price) + "/ current_price :" + str(current_price) + "/ ma15 :" + str(ma15))
                 # 매수 1차
                 if i == 0 and target_price < current_price and ma15 < current_price:
+                    buy_seq = i
                     #upbit.buy_market_order(ticker, totalOrderAmt * rate30)
                     logger.info("ticker :" + ticker + "/ buy amt :" + str(totalOrderAmt * rate30))
                     time.sleep(1)
@@ -142,6 +163,7 @@ while True:
                     
                 # 매수 2차
                 if i == 1 and current_price < buy_average * rate_minus:
+                    buy_seq = i
                     #upbit.buy_market_order(ticker, totalOrderAmt * rate30)
                     logger.info("ticker :" + ticker + "/ buy amt :" + str(totalOrderAmt * rate30))
                     time.sleep(1)
@@ -151,6 +173,7 @@ while True:
                 
                 # 매수 3차
                 if i == 2 and current_price < buy_average * rate_minus:
+                    buy_seq = i
                     #upbit.buy_market_order(ticker, totalOrderAmt * rate40)
                     logger.info("ticker :" + ticker + "/ buy amt :" + str(totalOrderAmt * rate40))
                     time.sleep(1)

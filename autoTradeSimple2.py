@@ -130,7 +130,7 @@ def price_log():
        
 ##########################################################################################################
 schedule.every(5).minutes.do(lambda: price_log())
-#chedule.every(5).seconds.do(lambda: price_log())
+#schedule.every(5).seconds.do(lambda: price_log())
 
 
 # 자동 매매 무한반복
@@ -150,11 +150,11 @@ while True:
                 schedule.run_pending()
                 current_price = get_current_price(ticker)
                 time.sleep(1)
-                logger.debug("target_price :" + str(target_price) + "/ current_price :" + str(current_price) + "/ ma15 :" + str(ma15))
+                #logger.debug("target_price :" + str(target_price) + "/ current_price :" + str(current_price) + "/ ma15 :" + str(ma15))
                 # 매수 1차
                 if i == 0 and target_price < current_price and ma15 < current_price:
                     buy_seq = i
-                    #upbit.buy_market_order(ticker, totalOrderAmt * rate30)
+                    upbit.buy_market_order(ticker, totalOrderAmt * rate30)
                     logger.info("ticker :" + ticker + "/ buy amt :" + str(totalOrderAmt * rate30))
                     time.sleep(1)
                     buy_average = get_buy_average(buy_cur)
@@ -164,7 +164,7 @@ while True:
                 # 매수 2차
                 if i == 1 and current_price < buy_average * rate_minus:
                     buy_seq = i
-                    #upbit.buy_market_order(ticker, totalOrderAmt * rate30)
+                    upbit.buy_market_order(ticker, totalOrderAmt * rate30)
                     logger.info("ticker :" + ticker + "/ buy amt :" + str(totalOrderAmt * rate30))
                     time.sleep(1)
                     buy_average = get_buy_average(buy_cur)
@@ -174,7 +174,7 @@ while True:
                 # 매수 3차
                 if i == 2 and current_price < buy_average * rate_minus:
                     buy_seq = i
-                    #upbit.buy_market_order(ticker, totalOrderAmt * rate40)
+                    upbit.buy_market_order(ticker, totalOrderAmt * rate40)
                     logger.info("ticker :" + ticker + "/ buy amt :" + str(totalOrderAmt * rate40))
                     time.sleep(1)
                     buy_average = get_buy_average(buy_cur)
@@ -186,7 +186,7 @@ while True:
 
         elif now > end_time:
             coin = get_balance(sel_cur)
-            #upbit.sell_market_order(ticker, coin * sel_rate)
+            upbit.sell_market_order(ticker, coin * sel_rate)
             logger.info("target_price :" + str(target_price) + "/ current_price :" + str(current_price) +"/ coin :" + str(coin))
             time.sleep(1)
         
